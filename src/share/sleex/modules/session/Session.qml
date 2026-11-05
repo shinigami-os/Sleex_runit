@@ -1,5 +1,6 @@
 import qs
 import qs.modules.common
+import qs.services
 import SleexUiKit.Widgets
 import SleexUiKit.Functions
 import SleexUiKit.Appearance
@@ -25,6 +26,7 @@ Scope {
     }
 
     Loader {
+        asynchronous: true
         id: sessionLoader
         active: false
 
@@ -113,7 +115,7 @@ Scope {
                             id: sessionSleep
                             buttonIcon: "dark_mode"
                             buttonText: qsTr("Sleep")
-                            onClicked:  { Quickshell.execDetached(["sh", "-c", "loginctl suspend || systemctl suspend"]); sessionRoot.hide() }
+                            onClicked:  { PowerActions.suspend(); sessionRoot.hide() }
                             onFocusChanged: { if (focus) sessionRoot.subtitle = buttonText }
                             KeyNavigation.left: sessionLock
                             KeyNavigation.right: sessionLogout
@@ -148,7 +150,7 @@ Scope {
                             id: sessionHibernate
                             buttonIcon: "downloading"
                             buttonText: qsTr("Hibernate")
-                            onClicked: Quickshell.execDetached(["sh", "-c", "loginctl hibernate || systemctl hibernate"]);
+                            onClicked: PowerActions.hibernate();
                             onFocusChanged: { if (focus) sessionRoot.subtitle = buttonText }
                             KeyNavigation.up: sessionLock
                             KeyNavigation.right: sessionShutdown
@@ -157,7 +159,7 @@ Scope {
                             id: sessionShutdown
                             buttonIcon: "power_settings_new"
                             buttonText: qsTr("Shutdown")
-                            onClicked: Quickshell.execDetached(["sh", "-c", "loginctl poweroff || systemctl poweroff"])
+                            onClicked: PowerActions.poweroff()
                             onFocusChanged: { if (focus) sessionRoot.subtitle = buttonText }
                             KeyNavigation.left: sessionHibernate
                             KeyNavigation.right: sessionReboot
@@ -167,7 +169,7 @@ Scope {
                             id: sessionReboot
                             buttonIcon: "restart_alt"
                             buttonText: qsTr("Reboot")
-                            onClicked: Quickshell.execDetached(["reboot"]);
+                            onClicked: PowerActions.reboot();
                             onFocusChanged: { if (focus) sessionRoot.subtitle = buttonText }
                             KeyNavigation.left: sessionShutdown
                             KeyNavigation.right: root.hasSystemd ? sessionFirmwareReboot : null
@@ -195,7 +197,11 @@ Scope {
                     clip: true
 
                     Behavior on implicitWidth {
-                        animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+                        animation: NumberAnimation {
+    duration: Appearance.animation.elementMove.duration
+    easing.type: Appearance.animation.elementMove.type
+    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+}
                     }
 
                     StyledText {
@@ -224,17 +230,11 @@ Scope {
         function confirm() {
             countdownTimer.stop()
             powerConfirmLoader.active = false
-            const cmd = powerConfirmLoader.pendingAction === "reboot"
-                ? "loginctl reboot || systemctl reboot"
-                : "loginctl poweroff || systemctl poweroff"
-            Quickshell.execDetached(["sh", "-c", cmd])
+            PowerActions.run(powerConfirmLoader.pendingAction)
         }
 
         onActiveChanged: if (active) secondsLeft = 60
 
-        // One shared timer, not one per screen - otherwise each PanelWindow
-        // instance from the Variants below would run its own independent
-        // countdown, drifting apart and each firing confirm() on its own.
         Timer {
             id: countdownTimer
             interval: 1000
@@ -246,8 +246,6 @@ Scope {
             }
         }
 
-        // Mirrors Polkit.qml: shown on every screen via Variants, actual
-        // dialog content lives in its own file (PowerConfirmContent.qml).
         sourceComponent: Variants {
             model: Quickshell.screens
             delegate: PanelWindow {
@@ -259,10 +257,6 @@ Scope {
                 anchors { top: true; left: true; right: true; bottom: true }
                 color: "transparent"
                 WlrLayershell.namespace: "quickshell:power-confirm"
-                // Exclusive doesn't make sense once this shows on every
-                // screen at once via Variants (only one surface can truly
-                // hold an exclusive grab) - matches Polkit.qml's own choice
-                // here for the same reason.
                 WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
                 WlrLayershell.layer: WlrLayer.Overlay
                 exclusionMode: ExclusionMode.Ignore

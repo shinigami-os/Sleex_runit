@@ -24,6 +24,12 @@ Item {
     property bool buttonHovered: false
     property bool requestDockShow: previewPopup.show
 
+    // Only refresh the dock when the pinned list's content actually changes (fix animation happening on every desktop change)
+    property var pinnedAppsStable: []
+    readonly property string pinnedAppsKey: JSON.stringify(Config.options?.dock.pinnedApps ?? [])
+    onPinnedAppsKeyChanged: pinnedAppsStable = Config.options?.dock.pinnedApps ?? []
+    Component.onCompleted: pinnedAppsStable = Config.options?.dock.pinnedApps ?? []
+
     Layout.fillHeight: true
     Layout.topMargin: Appearance.sizes.hyprlandGapsOut // why does this work
     implicitWidth: listView.implicitWidth
@@ -39,7 +45,11 @@ Item {
         implicitWidth: contentWidth
 
         Behavior on implicitWidth {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+            animation: NumberAnimation {
+    duration: Appearance.animation.elementMoveFast.duration
+    easing.type: Appearance.animation.elementMoveFast.type
+    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+}
         }
 
         model: ScriptModel {
@@ -48,7 +58,7 @@ Item {
                 var map = new Map();
 
                 // Pinned apps
-                const pinnedApps = Config.options?.dock.pinnedApps ?? [];
+                const pinnedApps = root.pinnedAppsStable;
                 for (const appId of pinnedApps) {
                     if (!map.has(appId.toLowerCase())) map.set(appId.toLowerCase(), ({
                         pinned: true,
@@ -154,7 +164,11 @@ Item {
                 opacity: previewPopup.show ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    animation: NumberAnimation {
+    duration: Appearance.animation.elementMoveFast.duration
+    easing.type: Appearance.animation.elementMoveFast.type
+    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+}
                 }
             }
             Rectangle {
@@ -163,7 +177,11 @@ Item {
                 opacity: previewPopup.show ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    animation: NumberAnimation {
+    duration: Appearance.animation.elementMoveFast.duration
+    easing.type: Appearance.animation.elementMoveFast.type
+    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+}
                 }
                 clip: true
                 color: Appearance.colors.colSurfaceContainer
@@ -174,10 +192,18 @@ Item {
                 implicitHeight: previewRowLayout.implicitHeight + padding * 2
                 implicitWidth: previewRowLayout.implicitWidth + padding * 2
                 Behavior on implicitWidth {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    animation: NumberAnimation {
+    duration: Appearance.animation.elementMoveFast.duration
+    easing.type: Appearance.animation.elementMoveFast.type
+    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+}
                 }
                 Behavior on implicitHeight {
-                    animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                    animation: NumberAnimation {
+    duration: Appearance.animation.elementMoveFast.duration
+    easing.type: Appearance.animation.elementMoveFast.type
+    easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+}
                 }
 
                 RowLayout {

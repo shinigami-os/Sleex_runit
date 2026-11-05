@@ -3,6 +3,7 @@ import SleexUiKit.Widgets
 import qs.services
 import SleexUiKit.Functions
 import SleexUiKit.Appearance
+import Sleex.Utils
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
@@ -88,12 +89,20 @@ Item {
 
                 Behavior on x {
                     enabled: tabIndicator.enableIndicatorAnimation
-                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+                    animation: NumberAnimation {
+    duration: Appearance.animation.elementMove.duration
+    easing.type: Appearance.animation.elementMove.type
+    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+}
                 }
 
                 Behavior on implicitWidth {
                     enabled: tabIndicator.enableIndicatorAnimation
-                    animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+                    animation: NumberAnimation {
+    duration: Appearance.animation.elementMove.duration
+    easing.type: Appearance.animation.elementMove.type
+    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+}
                 }
             }
         }
@@ -112,6 +121,7 @@ Item {
             Layout.fillHeight: true
             spacing: 10
             clip: true
+            interactive: !BentoModel.isDragging
             currentIndex: currentTab
             onCurrentIndexChanged: {
             tabIndicator.enableIndicatorAnimation = true
@@ -131,6 +141,7 @@ Item {
                 height: swipeView.height
 
                 Loader {
+        asynchronous: true
                 anchors.fill: parent
                 sourceComponent: (
                     modelData.icon === "rocket_launch" ? homeComp :

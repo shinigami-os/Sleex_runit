@@ -4,6 +4,7 @@ import qs.modules.common
 import SleexUiKit.Widgets
 import SleexUiKit.Functions
 import SleexUiKit.Appearance
+import Sleex.Utils
 import qs.modules.dashboard.quickToggles
 import QtQuick
 import QtQuick.Controls
@@ -38,7 +39,7 @@ Scope {
             implicitWidth: Screen.width
             implicitHeight: Screen.height
             WlrLayershell.namespace: "quickshell:dashboard"
-            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.layer: GlobalStates.tutorialMode ? WlrLayer.Top : WlrLayer.Overlay
       
             color: "transparent"
             mask: GlobalStates.dashboardOpen ? null : emptyRegion
@@ -50,7 +51,7 @@ Scope {
                 windows: [ dashboardRoot ]
                 property bool canBeActive: dashboardRoot.monitorIsFocused
                 active: false
-                onCleared: () => { if (!active) ipc.close() }
+                onCleared: () => { if (!active && !GlobalStates.tutorialMode) ipc.close() }
             }
 
             Connections {
@@ -70,6 +71,7 @@ Scope {
                 repeat: false
                 onTriggered: {
                     if (!grab.canBeActive) return
+                    if (GlobalStates.tutorialMode) return
                     grab.active = GlobalStates.dashboardOpen
                 }
             }
@@ -131,8 +133,6 @@ Scope {
                     asynchronous: true
                     visible: (GlobalStates.dashboardOpen && dashboardRoot.monitorIsFocused) || scaleWrapper.isAnimating
 
-                    layer.enabled: scaleWrapper.isAnimating
-                    layer.smooth: true
 
                     onLoaded: {
                         Qt.callLater(() => {
@@ -227,12 +227,19 @@ Scope {
                                     StyledText {
                                         font.pixelSize: Appearance.font.pixelSize.normal
                                         color: Appearance.colors.colOnLayer0
-                                        text: StringUtils.format(qsTr("Uptime: {0}"), DateTime.uptime)
+                                        text: qsTr("Uptime: %1").arg(DateTime.uptime)
                                     }
 
                                     Item { Layout.fillWidth: true }
 
                                     ButtonGroup {
+                                        QuickToggleButton {
+                                            visible: dashboardTabs.currentTab === 0
+                                            toggled: BentoModel.customizeOpen
+                                            buttonIcon: "dashboard_customize"
+                                            onClicked: BentoModel.customizeOpen = !BentoModel.customizeOpen
+                                            StyledToolTip { text: qsTr("Customize Home Bento Layout") }
+                                        }
                                         QuickToggleButton {
                                             toggled: false
                                             buttonIcon: "restart_alt"
@@ -300,8 +307,17 @@ Scope {
             if (GlobalStates.dashboardOpen) close()
             else open()
         }
-        function close(): void  { GlobalStates.dashboardOpen = false }
+        function close(): void  { 
+            GlobalStates.dashboardOpen = false 
+            GlobalStates.tutorialMode = false
+        }
         function open(): void   {
+            GlobalStates.tutorialMode = false
+            GlobalStates.dashboardOpen = true
+            Notifications.timeoutAll()
+        }
+        function openTutorial(): void {
+            GlobalStates.tutorialMode = true
             GlobalStates.dashboardOpen = true
             Notifications.timeoutAll()
         }
